@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Brown Noise WASM</title>
+</head>
+<body>
+  <h1>Brown Noise via WASM</h1>
+  <button id="start">▶️ Start</button>
+  <script src="wasm_exec.js"></script>
+  <script>
+    // Bootstrap Go WASM
+    const go = new Go();
+    let instance;
+    WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject)
+      .then(res => {
+        instance = res.instance;
+        return go.run(res.instance);
+      });
+
+    document.getElementById("start").onclick = async () => {
+      // init with damping=0.90, gain=0.5, stepSize=0.02
+      initStreamer(0.90, 0.5, 0.02);
+
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const bufferSize = 4096;
+      const node = audioCtx.createScriptProcessor(bufferSize, 0, 2);
+      node.onaudioprocess = e => {
+        // pull Float32Array back from WASM
+        const samples = nextSamples(bufferSize);
+        const left = e.outputBuffer.getChannelData(0);
+        const right = e.outputBuffer.getChannelData(1);
+        for (let i = 0; i < bufferSize; i++) {
+          left[i] = samples[i*2];
+          right[i] = samples[i*2 + 1];
+        }
+      };
+      node.connect(audioCtx.destination);
+    };
+  </script>
+</body>
+</html>
