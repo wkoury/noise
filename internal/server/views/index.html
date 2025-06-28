@@ -12,6 +12,10 @@
     // Bootstrap Go WASM
     const go = new Go();
     let instance;
+    let audioCtx;
+    let node;
+    let isPlaying = false;
+
     WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject)
       .then(res => {
         instance = res.instance;
@@ -19,23 +23,42 @@
       });
 
     document.getElementById("start").onclick = async () => {
-      // init with damping=0.90, gain=0.5, stepSize=0.02
-      initStreamer(0.90, 0.5, 0.02);
+      const button = document.getElementById("start");
 
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const bufferSize = 4096;
-      const node = audioCtx.createScriptProcessor(bufferSize, 0, 2);
-      node.onaudioprocess = e => {
-        // pull Float32Array back from WASM
-        const samples = nextSamples(bufferSize);
-        const left = e.outputBuffer.getChannelData(0);
-        const right = e.outputBuffer.getChannelData(1);
-        for (let i = 0; i < bufferSize; i++) {
-          left[i] = samples[i*2];
-          right[i] = samples[i*2 + 1];
+      if (isPlaying) {
+        // Stop the audio
+        if (node) {
+          node.disconnect();
+          node = null;
         }
-      };
-      node.connect(audioCtx.destination);
+        if (audioCtx) {
+          audioCtx.close();
+          audioCtx = null;
+        }
+        button.textContent = "▶️ Start";
+        isPlaying = false;
+      } else {
+        // Start the audio
+        // init with damping=0.90, gain=0.5, stepSize=0.02
+        initStreamer(0.90, 0.5, 0.02);
+
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const bufferSize = 4096;
+        node = audioCtx.createScriptProcessor(bufferSize, 0, 2);
+        node.onaudioprocess = e => {
+          // pull Float32Array back from WASM
+          const samples = nextSamples(bufferSize);
+          const left = e.outputBuffer.getChannelData(0);
+          const right = e.outputBuffer.getChannelData(1);
+          for (let i = 0; i < bufferSize; i++) {
+            left[i] = samples[i*2];
+            right[i] = samples[i*2 + 1];
+          }
+        };
+        node.connect(audioCtx.destination);
+        button.textContent = "⏹️ Stop";
+        isPlaying = true;
+      }
     };
   </script>
 </body>
