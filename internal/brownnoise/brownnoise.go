@@ -1,12 +1,13 @@
 package brownnoise
 
 import (
+	"fmt"
 	"math/rand"
 )
 
 // BrownNoiseStreamer implements beep.Streamer for brown (Brownian) noise.
 type BrownNoiseStreamer struct {
-	// Current “position” of the random walk
+	// Current "position" of the random walk
 	Accumulator float64
 	// Multiplicative factor to keep the walk from wandering too far
 	Damping float64
@@ -14,6 +15,26 @@ type BrownNoiseStreamer struct {
 	Gain float64
 	// Step size to control the smoothness of the noise
 	StepSize float64
+}
+
+// NewBrownNoiseStreamer creates a new BrownNoiseStreamer with validation
+func NewBrownNoiseStreamer(damping, gain, stepSize float64) (*BrownNoiseStreamer, error) {
+	if damping <= 0 || damping > 1 {
+		return nil, fmt.Errorf("damping must be between 0 and 1, got %f", damping)
+	}
+	if gain < 0 || gain > 1 {
+		return nil, fmt.Errorf("gain must be between 0 and 1, got %f", gain)
+	}
+	if stepSize <= 0 {
+		return nil, fmt.Errorf("stepSize must be positive, got %f", stepSize)
+	}
+
+	return &BrownNoiseStreamer{
+		Accumulator: 0.0,
+		Damping:     damping,
+		Gain:        gain,
+		StepSize:    stepSize,
+	}, nil
 }
 
 // Stream fills the provided sample slice with brown noise samples.

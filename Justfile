@@ -25,7 +25,7 @@ lint:
 
 # Run tests with coverage
 test:
-  go test ./... -cover
+  go test ./...
 
 # Vet the code
 vet:
